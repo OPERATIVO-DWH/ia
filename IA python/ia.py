@@ -113,7 +113,6 @@ def ejecutar_consulta(consulta, driver, ip_url, usuario, password, base_datos, t
         resultados = cursor.fetchall()  # Obtener todos los resultados
         cursor.close()
         conexion.close()
-        print(f"Consulta a ejecutar: {consulta}")
         return resultados
 
     except pyodbc.Error as err:
