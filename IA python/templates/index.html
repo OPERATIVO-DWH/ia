@@ -1,0 +1,231 @@
+<!-- cambio 07-10-2024 V133--> 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>VIVA soft | Consultas DPI</title>
+ 
+  <!-- Google Font: Source Sans Pro -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,400i,700&display=fallback">
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="/static/public/css/all.min.css">
+  <!-- Theme style -->
+  <link rel="stylesheet" href="/static/public/css/adminlte.min.css">
+  <!-- Custom Styles (Opcional) -->
+  <style>
+    body {
+      background-color: #f4f6f9;
+    }
+    .card-title {
+      font-weight: 600;
+    }
+    .btn-custom {
+      background-color: #17a2b8;
+      color: white;
+    }
+    .btn-custom:hover {
+      background-color: #138496;
+    }
+    .textarea-custom {
+      width: 100%;
+      padding: 10px;
+      border-radius: 4px;
+      border: 1px solid #ced4da;
+      font-size: 1rem;
+    }
+    .pre-scrollable {
+      max-height: 300px;
+      overflow-y: scroll;
+    }
+  </style>
+</head>
+<body class="hold-transition sidebar-mini layout-fixed">
+  <div class="wrapper">
+    <div class="content-wrapper d-flex align-items-center" style="min-height: 100vh;">
+      <!-- Main content -->
+      <div class="col-md-10 col-sm-10">
+        <div class="card card-info card-outline shadow">
+          <div class="card-header">
+            <h2 style="display: flex; align-items: center;">      
+                <img src="/static/public/img/viva1.png" alt="Logo" width="69" height="23" style="opacity: .8; margin-right: 8px;"> <span class="brand-text font-weight-light">soft. | <span style="color: #273615;">ia</span></span>  
+            </h2>
+          </div>
+          <div class="card-body">
+            <!-- Casillas de verificación -->
+            <div class="form-group">
+                       
+            </div>
+            <form id="consultaForm" class="mb-4">
+              <h>Datos requeridos:</h> 
+                  <label for="fecha_inicio">Fecha Inicio:</label>
+                  <input type="date" id="fecha_inicio" name="fecha_inicio" required>
+          
+                  <label for="fecha_fin">Fecha Fin:</label>
+                  <input type="date" id="fecha_fin" name="fecha_fin" required>   
+                  
+              <div class="form-group">
+                <textarea id="pregunta" class="textarea-custom" rows="4" placeholder="Introduce tu pregunta aquí..." required></textarea>
+              </div>
+              <button type="submit" id="btnEnviar" class="btn btn-custom btn-block">Enviar Consulta</button>
+            </form>
+            <div class="resultados">
+              <h4>Consulta SQL Generada:</h4>
+              <pre id="consultaSql" class="bg-light p-3 pre-scrollable"></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+ 
+  <!-- Modal para mostrar resultados en tabla -->
+  <div class="modal fade" id="resultadosModal" tabindex="-1" role="dialog" aria-labelledby="resultadosModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="resultadosModalLabel">Resultados de la Consulta</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div id="tablaResultados" class="table-responsive"></div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-success" id="btnDescargar" onclick="descargarExcel()">Descargar</button>
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">Cerrar</button>          
+        </div>
+      </div>
+    </div>
+  </div>
+ 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
+  <script>
+      function descargarExcel() {
+          const resultados = JSON.parse(document.getElementById('consultaSql').textContent);
+ 
+          if (resultados && Array.isArray(resultados.resultados) && resultados.resultados.length > 0) {
+              const ws = XLSX.utils.json_to_sheet(resultados.resultados);
+              const wb = XLSX.utils.book_new();
+              XLSX.utils.book_append_sheet(wb, ws, "Resultados");
+ 
+              // Generar archivo Excel y descargarlo
+              XLSX.writeFile(wb, 'resultados_consulta.xlsx');
+          } else {
+              alert('No hay resultados para descargar.');
+          }
+      }
+  </script>
+ 
+  <!-- JavaScript -->
+  <script>
+   document.getElementById('consultaForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+
+    const pregunta = document.getElementById('pregunta').value;
+    const fechaInicio = document.getElementById('fecha_inicio').value;
+    const fechaFin = document.getElementById('fecha_fin').value;
+    const btnEnviar = document.getElementById('btnEnviar');
+
+    // Desactivar el botón al enviar la consulta
+    btnEnviar.disabled = true;
+    btnEnviar.textContent = 'Enviando Consulta...'; // Cambia el texto del botón mientras se procesa
+
+    fetch('/consulta', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ pregunta: pregunta, fecha_inicio: fechaInicio, fecha_fin: fechaFin })
+    })
+    .then(response => response.json())
+    .then(data => {
+        // Mostrar la consulta SQL generada
+        document.getElementById('consultaSql').textContent = JSON.stringify(data, null, null); // Asegúrate de que se almacenen los resultados en un formato JSON válido            
+        // Generar la tabla dinámica debajo del texto "Resultados:"
+        const resultados = data.resultados;
+        if (resultados && resultados.length > 0) {
+            generarTabla(resultados);
+            // Mostrar el modal con los resultados
+            $('#resultadosModal').modal('show');
+        } else {
+            document.getElementById('tablaResultados').innerHTML = '<p>No se encontraron resultados.</p>';
+        }
+
+        // Volver a activar el botón y restaurar el texto
+        btnEnviar.disabled = false;
+        btnEnviar.textContent = 'Enviar Consulta';
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        document.getElementById('tablaResultados').innerHTML = '<p class="error">Hubo un error al procesar la consulta.</p>';
+       
+        // Volver a activar el botón incluso si hay un error
+        btnEnviar.disabled = false;
+        btnEnviar.textContent = 'Enviar Consulta';
+    });
+});
+
+ 
+    function generarTabla(datos) {
+        const tablaResultados = document.getElementById('tablaResultados');
+        tablaResultados.innerHTML = ''; // Limpiar la tabla anterior
+ 
+        const tabla = document.createElement('table');
+        tabla.classList.add('table', 'table-striped', 'table-bordered');
+ 
+        // Crear encabezado de la tabla
+        const thead = document.createElement('thead');
+        const filaEncabezado = document.createElement('tr');
+ 
+        // Añadir una columna "Número"
+        const thNumero = document.createElement('th');
+        thNumero.textContent = 'Número';
+        filaEncabezado.appendChild(thNumero);
+ 
+        // Obtener dinámicamente los nombres de las columnas de los datos
+        const columnas = Object.keys(datos[0]); // Los nombres de las columnas que vienen del select
+ 
+        columnas.forEach(columna => {
+            const th = document.createElement('th');
+            th.textContent = columna; // Usar el nombre de la columna proporcionado por el select
+            filaEncabezado.appendChild(th);
+        });
+ 
+        thead.appendChild(filaEncabezado);
+        tabla.appendChild(thead);
+ 
+        // Crear cuerpo de la tabla
+        const tbody = document.createElement('tbody');
+        datos.forEach((fila, index) => {
+            const tr = document.createElement('tr');
+ 
+            // Añadir la columna con el número de la fila
+            const tdNumero = document.createElement('td');
+            tdNumero.textContent = index + 1;
+            tr.appendChild(tdNumero);
+ 
+            columnas.forEach(columna => {
+                const td = document.createElement('td');
+                td.textContent = fila[columna]; // Agregar los valores de cada columna
+                tr.appendChild(td);
+            });
+            tbody.appendChild(tr);
+        });
+ 
+        tabla.appendChild(tbody);
+        tablaResultados.appendChild(tabla);
+    }
+  </script>
+ 
+  <!-- jQuery -->
+  <script src="/static/public/js/jquery.min.js"></script>
+  <!-- Bootstrap 4 -->
+  <script src="/static/public/js/bootstrap.bundle.min.js"></script>
+  <!-- AdminLTE App -->
+  <script src="/static/public/js/adminlte.min.js"></script>
+  <!-- Bootstrap Modal -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.min.js"></script>
+</body>
+</html>
