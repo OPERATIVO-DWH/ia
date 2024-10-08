@@ -1,4 +1,4 @@
-<!-- cambio 07-10-2024 V133--> 
+<!-- cambio 07-10-2024 V15:40-->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -57,13 +57,13 @@
                        
             </div>
             <form id="consultaForm" class="mb-4">
-              <h>Datos requeridos:</h> 
+              <h>Datos requeridos:</h>
                   <label for="fecha_inicio">Fecha Inicio:</label>
                   <input type="date" id="fecha_inicio" name="fecha_inicio" required>
-          
+         
                   <label for="fecha_fin">Fecha Fin:</label>
-                  <input type="date" id="fecha_fin" name="fecha_fin" required>   
-                  
+                  <input type="date" id="fecha_fin" name="fecha_fin" required>  
+                 
               <div class="form-group">
                 <textarea id="pregunta" class="textarea-custom" rows="4" placeholder="Introduce tu pregunta aquí..." required></textarea>
               </div>
@@ -122,16 +122,16 @@
   <script>
    document.getElementById('consultaForm').addEventListener('submit', function(e) {
     e.preventDefault();
-
+ 
     const pregunta = document.getElementById('pregunta').value;
     const fechaInicio = document.getElementById('fecha_inicio').value;
     const fechaFin = document.getElementById('fecha_fin').value;
     const btnEnviar = document.getElementById('btnEnviar');
-
+ 
     // Desactivar el botón al enviar la consulta
     btnEnviar.disabled = true;
     btnEnviar.textContent = 'Enviando Consulta...'; // Cambia el texto del botón mientras se procesa
-
+ 
     fetch('/consulta', {
         method: 'POST',
         headers: {
@@ -152,7 +152,7 @@
         } else {
             document.getElementById('tablaResultados').innerHTML = '<p>No se encontraron resultados.</p>';
         }
-
+ 
         // Volver a activar el botón y restaurar el texto
         btnEnviar.disabled = false;
         btnEnviar.textContent = 'Enviar Consulta';
@@ -166,7 +166,7 @@
         btnEnviar.textContent = 'Enviar Consulta';
     });
 });
-
+ 
  
     function generarTabla(datos) {
         const tablaResultados = document.getElementById('tablaResultados');
