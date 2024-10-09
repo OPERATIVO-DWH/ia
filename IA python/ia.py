@@ -7,7 +7,7 @@ from langchain_community.llms import Ollama
 app = Flask(__name__)
  
 # Configuración del modelo Llama 3.2
-llm = Ollama(model="llama3.2", temperature=0.1)
+llm = Ollama(model="llama3.2", temperature=0.5)
  
 # Configurar el logging
 logging.basicConfig(level=logging.INFO)
@@ -76,8 +76,9 @@ def generar_consulta_sql(pregunta, fecha_inicio, fecha_fin, palabras_clave, prom
         en el where siempre usa esto:
         WHERE a.fecha BETWEEN TO_DATE('{fecha_inicio}', 'yyyy-mm-dd') AND TO_DATE('{fecha_fin}', 'yyyy-mm-dd')
         Pregunta: {pregunta}
-        Respuesta: Devuelve solo la consulta SQL sin ninguna explicación ni texto adicional.
+        Respuesta: Devuelve solo la consulta SQL sin ninguna explicacion ni texto adicional.
         """
+        print(f"Prompt generado: {prompt}")  # Imprime el prompt en la consola
         try:
             consulta_sql = llm.invoke(prompt).strip()
             consulta_sql = consulta_sql.replace("```sql", "").replace("```", "").strip()
