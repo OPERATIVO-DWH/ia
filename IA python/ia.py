@@ -73,6 +73,7 @@ def generar_consulta_sql(pregunta, fecha_inicio, fecha_fin, palabras_clave, prom
     if any(palabra.lower() in pregunta.lower() for palabra in palabras_clave):
         prompt = f"""
         {prompt1}
+        en el where siempre usa esto:
         WHERE a.fecha BETWEEN TO_DATE('{fecha_inicio}', 'yyyy-mm-dd') AND TO_DATE('{fecha_fin}', 'yyyy-mm-dd')
         Pregunta: {pregunta}
         Respuesta: Devuelve solo la consulta SQL sin ninguna explicación ni texto adicional.
@@ -143,11 +144,11 @@ def consulta():
     palabras_encontradas = buscar_palabra_clave(pregunta)
 
     if not palabras_encontradas:
-        return jsonify({"error": "No keywords found in the query"}), 400
+        return jsonify({"error": "Palabra Clave no encontrada"}), 400
 
     prompts = obtener_prompts(palabras_encontradas)
     if not prompts:
-        return jsonify({"error": "No prompts found for the given keywords"}), 400
+        return jsonify({"error": "no se tiene el query de la palabra Clave"}), 400
 
     consulta_sql = generar_consulta_sql(pregunta, fecha_inicio, fecha_fin, palabras_encontradas, prompts[0])
 
