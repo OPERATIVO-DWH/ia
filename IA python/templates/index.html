@@ -52,10 +52,6 @@
             </h2>
           </div>
           <div class="card-body">
-            <!-- Casillas de verificación -->
-            <div class="form-group">
-                       
-            </div>
             <form id="consultaForm" class="mb-4">
               <h>Datos requeridos:</h>
                   <label for="fecha_inicio">Fecha Inicio:</label>
@@ -68,6 +64,7 @@
                 <textarea id="pregunta" class="textarea-custom" rows="4" placeholder="Introduce tu pregunta aquí..." required></textarea>
               </div>
               <button type="submit" id="btnEnviar" class="btn btn-custom btn-block">Enviar Consulta</button>
+              <button type="button" id="btnCancelar" class="btn btn-secondary btn-block">Cancelar Consulta</button>
             </form>
             <div class="resultados">
               <h4>Consulta SQL Generada:</h4>
@@ -120,53 +117,72 @@
  
   <!-- JavaScript -->
   <script>
-   document.getElementById('consultaForm').addEventListener('submit', function(e) {
+  let controller = new AbortController(); // Controlador global para cancelar la solicitud
+
+  document.getElementById('consultaForm').addEventListener('submit', function(e) {
     e.preventDefault();
- 
+
     const pregunta = document.getElementById('pregunta').value;
     const fechaInicio = document.getElementById('fecha_inicio').value;
     const fechaFin = document.getElementById('fecha_fin').value;
     const btnEnviar = document.getElementById('btnEnviar');
- 
+
+    // Verificar si la fecha de fin es anterior a la fecha de inicio
+    if (new Date(fechaFin) < new Date(fechaInicio)) {
+        alert('La fecha de fin no puede ser anterior a la fecha de inicio.');
+        return; // Detener la ejecución si las fechas no son válidas
+    }
+
+    // Crear un nuevo controlador de abortar antes de cada nueva solicitud
+    controller = new AbortController();
+    const signal = controller.signal;
+
     // Desactivar el botón al enviar la consulta
     btnEnviar.disabled = true;
     btnEnviar.textContent = 'Enviando Consulta...'; // Cambia el texto del botón mientras se procesa
- 
+
     fetch('/consulta', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ pregunta: pregunta, fecha_inicio: fechaInicio, fecha_fin: fechaFin })
+        body: JSON.stringify({ pregunta: pregunta, fecha_inicio: fechaInicio, fecha_fin: fechaFin }),
+        signal: signal // Asociar la señal para cancelar la solicitud
     })
     .then(response => response.json())
     .then(data => {
-        // Mostrar la consulta SQL generada
-        document.getElementById('consultaSql').textContent = JSON.stringify(data, null, null); // Asegúrate de que se almacenen los resultados en un formato JSON válido            
-        // Generar la tabla dinámica debajo del texto "Resultados:"
+        document.getElementById('consultaSql').textContent = JSON.stringify(data, null, null);            
         const resultados = data.resultados;
         if (resultados && resultados.length > 0) {
             generarTabla(resultados);
-            // Mostrar el modal con los resultados
             $('#resultadosModal').modal('show');
         } else {
             document.getElementById('tablaResultados').innerHTML = '<p>No se encontraron resultados.</p>';
         }
- 
-        // Volver a activar el botón y restaurar el texto
+
         btnEnviar.disabled = false;
         btnEnviar.textContent = 'Enviar Consulta';
     })
     .catch(error => {
-        console.error('Error:', error);
-        document.getElementById('tablaResultados').innerHTML = '<p class="error">Hubo un error al procesar la consulta.</p>';
-       
-        // Volver a activar el botón incluso si hay un error
+        if (error.name === 'AbortError') {
+            document.getElementById('tablaResultados').innerHTML = '<p>Consulta cancelada por el usuario.</p>';
+        } else {
+            console.error('Error:', error);
+            document.getElementById('tablaResultados').innerHTML = '<p class="error">Hubo un error al procesar la consulta.</p>';
+        }
+        
         btnEnviar.disabled = false;
         btnEnviar.textContent = 'Enviar Consulta';
     });
 });
- 
+
+document.getElementById('btnCancelar').addEventListener('click', function () {
+  if (controller) {
+    controller.abort(); // Cancelar la solicitud actual
+    document.getElementById('tablaResultados').innerHTML = '<p>Consulta cancelada por el usuario.</p>';
+    controller = null; // Restablecer el controlador
+  }
+});
  
     function generarTabla(datos) {
         const tablaResultados = document.getElementById('tablaResultados');
@@ -175,43 +191,38 @@
         const tabla = document.createElement('table');
         tabla.classList.add('table', 'table-striped', 'table-bordered');
  
-        // Crear encabezado de la tabla
         const thead = document.createElement('thead');
         const filaEncabezado = document.createElement('tr');
  
-        // Añadir una columna "Número"
         const thNumero = document.createElement('th');
         thNumero.textContent = 'Número';
         filaEncabezado.appendChild(thNumero);
  
-        // Obtener dinámicamente los nombres de las columnas de los datos
-        const columnas = Object.keys(datos[0]); // Los nombres de las columnas que vienen del select
- 
+        const columnas = Object.keys(datos[0]);
         columnas.forEach(columna => {
             const th = document.createElement('th');
-            th.textContent = columna; // Usar el nombre de la columna proporcionado por el select
+            th.textContent = columna;
             filaEncabezado.appendChild(th);
         });
  
         thead.appendChild(filaEncabezado);
         tabla.appendChild(thead);
  
-        // Crear cuerpo de la tabla
         const tbody = document.createElement('tbody');
-        datos.forEach((fila, index) => {
-            const tr = document.createElement('tr');
+        datos.forEach((fila, indice) => {
+            const filaTabla = document.createElement('tr');
  
-            // Añadir la columna con el número de la fila
             const tdNumero = document.createElement('td');
-            tdNumero.textContent = index + 1;
-            tr.appendChild(tdNumero);
+            tdNumero.textContent = indice + 1;
+            filaTabla.appendChild(tdNumero);
  
             columnas.forEach(columna => {
                 const td = document.createElement('td');
-                td.textContent = fila[columna]; // Agregar los valores de cada columna
-                tr.appendChild(td);
+                td.textContent = fila[columna];
+                filaTabla.appendChild(td);
             });
-            tbody.appendChild(tr);
+ 
+            tbody.appendChild(filaTabla);
         });
  
         tabla.appendChild(tbody);
@@ -225,7 +236,5 @@
   <script src="/static/public/js/bootstrap.bundle.min.js"></script>
   <!-- AdminLTE App -->
   <script src="/static/public/js/adminlte.min.js"></script>
-  <!-- Bootstrap Modal -->
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.min.js"></script>
 </body>
 </html>
